@@ -1,0 +1,237 @@
+@model CustomerPortal.ViewModels.HomeIntervention
+@{
+    ViewData["Title"] = "Intervention";
+    var interventionCustomer = @Model.intcustomers;
+    var interventionBuilding = @Model.intbuildings;
+    var interventionBattery = @Model.intbatteries;
+    var interventionColumn = @Model.intcolumns;
+    var interventionElevator = @Model.intelevators;
+    var interventionEmployee = @Model.intemployees;
+}
+<h1>@ViewData["Title"]</h1>
+@* <h2>@Model.TestField1</h2>
+<h3>@Model.TestField2</h3> *@
+<section class="b-0">
+                <div class="container">
+                    <div class="row">
+                        <div class="col-lg-7 order-lg-2">
+                            <div class="heading-title mt-0">
+                                <h2 class="fs-20 fw-400" id="hi"></h2>
+                            </div>
+                        @* // Selectable field listing all customer's buildings *@
+                        <div class="form-group" id="building-all">
+                            <label for="Building">Building</label><br>
+                            <select class="form-control"  id="building-select" name="building">
+                            @* <option selected value="">None</option>
+                                @foreach(var building in interventionBuilding )
+                                {
+                                <option value=@building.Id> @building.Id</option>
+                                }    *@
+                            </select>
+                        </div>
+                        @* // Selectable field listing all customer's batteries *@
+                        <div class="form-group" id="battery-all">
+                            <label for="Battery">Battery</label><br>
+                            <select class="form-control" id="battery-select" name="battery">
+                            @* <option selected value="">None</option>
+                            @foreach(var battery in interventionBattery )
+                                {
+                                <option value=''> @battery.Id</option>
+                                }    *@
+                            </select>
+                        </div>
+                        @* // Selectable field listing all customer's columns *@
+                        <div class="form-group" id="column-all" >
+                            <label for="Column">Column</label><br>
+                            <select class="form-control" id="column-select" name="column">
+                            @* <option selected value="">None</option>
+                            @foreach(var column in interventionColumn )
+                                {
+                                <option value=''> @column.Id</option>
+                                }    *@
+                            </select>
+                        </div>
+                        @* // Selectable field listing all customer's elevators *@
+                        <div class="form-group" id="elevator-all">
+                            <label for="Elevator">Elevator</label><br>
+                            <select class="form-control" id="elevator-select" name="elevator">
+                            <option value="">None</option>
+                            @* @foreach(var elevator in interventionElevator )
+                                {
+                                <option value=''> @elevator.Id</option>
+                                }    *@
+                            </select>
+                        </div>
+                          @* // Selectable field listing all employees *@
+                        <div class="form-group">
+                            <label for="Employee">Employee</label><br>
+                            <select class="form-control" id="employee-select" name="employee">
+                            <option value="">Select</option>
+                                @* @foreach(var employee in interventionEmployee )
+                                {
+                                    <option value=''> @employee.Id</option>
+                                }    *@
+                            </select>
+                        </div>
+                        <div class="fs-20 fw-400">
+                            <button type="submit" class="btn btn-primary"><i class="Intervention-btn"></i>SUBMIT</button>
+                        </div>
+                </div>
+ </section>
+@* <script src="jquery-3.6.0.min.js"></script>   *@
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"> </script>
+<script>
+//<select> ids
+const buildingSelect = document.getElementById('building-select')
+const batterySelect = document.getElementById('battery-select')
+const columnSelect = document.getElementById('column-select')
+const elevatorSelect = document.getElementById('elevator-select')
+const employeeSelect = document.getElementById('employee-select')
+//<div> ids
+$("#battery-all").hide()
+$("#column-all").hide()
+$("#elevator-all").hide()
+//Populate Buildings
+queryFetch(`
+  {
+    buildings{
+      id
+      address{
+        number_street
+        city
+      }
+    }
+  }
+`).then(data => {
+  data.data.buildings.forEach(building => {
+    const option = document.createElement('option')
+    option.value = building.id
+    option.innerText = building.address.number_street
+    buildingSelect.append(option)
+  })
+})
+//          ---- POPULATE BATTERIES ----
+buildingSelect.addEventListener('change', async e => {
+  const buildingID = e.target.value
+  $("#battery-all").show()
+  $("#column-all").hide()
+  $("#elevator-all").hide()
+  const batteries = await getBatteries(buildingID)
+  batterySelect.innerHTML = ''
+  const nullOption = document.createElement('option')
+  nullOption.value = null
+  nullOption.innerText = "None"
+  batterySelect.append(nullOption)
+  batteries.forEach(battery => {
+    const option = document.createElement('option')
+    option.value = battery.id
+    option.innerText = battery.id
+    batterySelect.append(option)
+  })
+})
+function getBatteries(buildingID) {
+  return queryFetch(`
+    query getBatteries($id: ID!) {
+        building(id: $id) {
+        battery {
+            status
+            id
+            }
+        }
+    }
+  `, { id: buildingID }).then(data => {
+    return data.data.building.battery
+  })
+}
+//          ---- END POPULATE BATTERIES ----
+//          ---- POPULATE COLUMNS ----
+batterySelect.addEventListener('change', async e => {
+    const batteryID = e.target.value
+    $("#column-all").show()
+    $("#elevator-all").hide()
+    const columns = await getColumns(batteryID)
+    columnSelect.innerHTML = ''
+    const nullOption = document.createElement('option')
+    nullOption.value = null
+    nullOption.innerText = "None"
+    columnSelect.append(nullOption)
+    columns.forEach(column => {
+      const option = document.createElement('option')
+      option.value = column.id
+      option.innerText = column.id
+      columnSelect.append(option)
+    })
+})
+function getColumns(batteryID) {
+    return queryFetch(`
+      query getColumns($id: ID!) {
+          battery(id: $id) {
+          column {
+              id
+              }
+          }
+      }
+    `, { id: batteryID }).then(data => {
+      return data.data.battery.column
+    })
+}
+//          ---- END POPULATE COLUMNS ----
+//          ---- POPULATE ELEVATORS ----
+columnSelect.addEventListener('change', async e => {
+    const columnID = e.target.value
+    $("#elevator-all").show()
+    const elevators = await getElevators(columnID)
+    elevatorSelect.innerHTML = ''
+    const nullOption = document.createElement('option')
+    nullOption.value = null
+    nullOption.innerText = "None"
+    elevatorSelect.append(nullOption)
+    elevators.forEach(elevator => {
+      const option = document.createElement('option')
+      option.value = elevator.id
+      option.innerText = elevator.id
+      elevatorSelect.append(option)
+    })
+})
+function getElevators(columnID) {
+    return queryFetch(`
+      query getColumns($id: ID!) {
+          column(id: $id) {
+          elevator {
+              id
+              }
+          }
+      }
+    `, { id: columnID }).then(data => {
+      return data.data.column.elevator
+    })
+}
+queryFetch(`
+  {
+    employees{
+      id
+      last_name
+      first_name
+      }
+  }
+`).then(data => {
+  data.data.employees.forEach(employee => {
+    const emoption = document.createElement('option')
+    emoption.value = employee.id
+    emoption.innerText = `${employee.last_name}, ${employee.first_name}`
+    employeeSelect.append(emoption)
+  })
+})
+//          ---- END POPULATE ELEVATORS ----
+//          ---- BIG GUY ----
+function queryFetch(query, variables) {
+  return fetch('https://apple-crisp-52216.herokuapp.com/graphql', {
+    method: 'POST',
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      query: query,
+      variables: variables
+    })
+  }).then(res => res.json())
+}
+</script>

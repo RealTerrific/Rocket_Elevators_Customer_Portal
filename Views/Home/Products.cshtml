@@ -1,0 +1,271 @@
+@{
+    ViewData["Title"] = "Products";
+}
+<div class="text-center">
+    <h1 class="display-4">Your Products</h1>
+</div>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+<style>
+    th{
+        color:#fff;
+            }
+</style>
+<div id="table-dropdown" class="col-md-12">
+    <label style="display: inline-block">Your information</label>
+    <select id="table-select" onchange="tableData()">
+        <option selected hidden>Select</option>
+        <option>Buildings</option>
+        <option>Batteries</option>
+        <option>Columns</option>
+        <option>Elevators</option>
+    </select>
+</div>
+<div id="building-table">
+    <table class="table table-striped">
+        <tr  class="bg-info">
+            <th>Building ID</th>
+            <th>Address</th>
+            <th>City</th>
+        </tr>
+        <tbody id="building-info">
+        </tbody>
+    </table>
+</div>
+<div id="battery-table">
+    <table class="table table-striped">
+        <tr  class="bg-info">
+            <th>Building ID</th>
+            <th>Building Type</th>
+            <th>Status</th>
+            <th>Information</th>
+        </tr>
+        <tbody id="battery-info">
+        </tbody>
+    </table>
+</div>
+<div id="column-table">
+    <table class="table table-striped">
+        <tr  class="bg-info">
+            <th>Battery ID</th>
+            <th>Status</th>
+            <th>Floors Served</th>
+        </tr>
+        <tbody id="column-info">
+        </tbody>
+    </table>
+</div>
+<div id="elevator-table">
+    <table class="table table-striped">
+        <tr  class="bg-info">
+            <th>Column ID</th>
+            <th>Model</th>
+            <th>Status</th>
+            <th>Certificate of Inspection</th>
+        </tr>
+        <tbody id="elevator-info">
+        </tbody>
+    </table>
+</div>
+<script src="~/js/jquery-3.3.1.min.js"></script>
+<script src="~/js/product.js"></script>
+<script>
+var tableSelect = document.getElementById("table-select")
+$("#building-table").hide()
+$("#battery-table").hide()
+$("#column-table").hide()
+$("#elevator-table").hide()
+function tableData(){
+    if (tableSelect.value === "Buildings"){
+        $("#building-info tr").remove();
+        getBuildingInfo();
+        $("#building-table").show()
+        $("#battery-table").hide()
+        $("#column-table").hide()
+        $("#elevator-table").hide()
+    }
+    else if(tableSelect.value === "Batteries"){
+        $("#battery-info tr").remove();
+        getBatteryInfo();
+        $("#building-table").hide()
+        $("#battery-table").show()
+        $("#column-table").hide()
+        $("#elevator-table").hide()
+    }
+    else if(tableSelect.value === "Columns"){
+        $("#column-info tr").remove();
+        getColumnInfo();
+        $("#building-table").hide()
+        $("#battery-table").hide()
+        $("#column-table").show()
+        $("#elevator-table").hide()
+    }
+    else if(tableSelect.value === "Elevators"){
+        $("#elevator-info tr").remove();
+        getElevatorInfo();
+        $("#building-table").hide()
+        $("#battery-table").hide()
+        $("#column-table").hide()
+        $("#elevator-table").show()
+    }
+}
+//                 ----BUILDING TABLE----
+const customerID = 4
+async function getBuildingInfo(){
+    var table = document.getElementById("building-info")
+    const buildings = await buildingFetch(customerID)
+    buildings.forEach(building => {
+        var row = `<tr>
+                        <td>${building.id}</td>
+                        <td>${building.address.number_street}</td>
+                        <td>${building.address.city}</td>
+                  </tr>`
+        table.innerHTML += row
+    })
+}
+function buildingFetch(customerID) {
+    return queryFetch(`
+    query getBuildings($id: ID!){
+        customer(id: $id){
+          building{
+            id
+            address{
+                number_street
+                city
+              }
+          }
+        }
+      }
+    `, {id: customerID}).then(data => {
+          return data.data.customer.building
+    })
+}
+//                 ----END BUILDING TABLE----
+//                 ----BATTERY TABLE----
+async function getBatteryInfo(){
+    var table = document.getElementById("battery-info")
+    const buildings = await buildingFetch(customerID)
+    for(i=0; i<buildings.length; i++){
+        var buildingID = buildings[i].id
+        const batteries = await batteryFetch(buildingID)
+        batteries.forEach(battery => {
+            var row = `<tr>
+                            <td>${battery.building_id}</td>
+                            <td>${battery.building_type}</td>
+                            <td>${battery.status}</td>
+                            <td>${battery.information}</td>
+                    </tr>`
+            table.innerHTML += row
+        })
+    }
+}
+function batteryFetch(buildingID) {
+    return queryFetch(`
+    query getBatteries($id: ID!){
+        building(id: $id){
+            battery{
+                id
+                building_id
+                building_type
+                status
+                information
+          }
+        }
+      }
+    `, {id: buildingID}).then(data => {
+        return data.data.building.battery
+    })
+}
+//                 ----END BATTERY TABLE----
+//                 ----COLUMN TABLE----
+async function getColumnInfo(){
+    var table = document.getElementById("column-info")
+    const buildings = await buildingFetch(customerID)
+    for(i=0; i<buildings.length; i++){
+        var buildingID = buildings[i].id
+        const batteries = await batteryFetch(buildingID)
+        for(j=0; j<batteries.length; j++){
+            var batteryID = batteries[j].id
+            const columns = await columnFetch(batteryID)
+            columns.forEach(column => {
+                var row = `<tr>
+                                <td>${column.battery_id}</td>
+                                <td>${column.status}</td>
+                                <td>${column.number_of_floors_served}</td>
+                        </tr>`
+                table.innerHTML += row
+            })
+        }
+    }
+}
+function columnFetch(batteryID) {
+    return queryFetch(`
+    query getColumns($id: ID!){
+        battery(id: $id){
+              column{
+                id
+                battery_id
+                status
+                number_of_floors_served
+          }
+        }
+      }
+    `, {id: batteryID}).then(data => {
+      return data.data.battery.column
+    })
+}
+//                 ----END COLUMN TABLE----
+//                 ----ELEVATOR TABLE----
+async function getElevatorInfo(){
+    var table = document.getElementById("elevator-info")
+    const buildings = await buildingFetch(customerID)
+    for(i=0; i<buildings.length; i++){
+        var buildingID = buildings[i].id
+        const batteries = await batteryFetch(buildingID)
+        for(j=0; j<batteries.length; j++){
+            var batteryID = batteries[j].id
+            const columns = await columnFetch(batteryID)
+            for(y=0; y<columns.length; y++){
+                var columnID = columns[y].id
+                const elevators = await elevatorFetch(columnID)
+                elevators.forEach(elevator => {
+                    var row = `<tr>
+                                    <td>${elevator.column_id}</td>
+                                    <td>${elevator.model}</td>
+                                    <td>${elevator.status}</td>
+                                    <td>${elevator.certificate_of_inspection}</td>
+                            </tr>`
+                    table.innerHTML += row
+                })
+            }
+        }
+    }
+}
+function elevatorFetch(columnID) {
+    return queryFetch(`
+    query getColumns($id: ID!){
+        column(id: $id){
+            elevator{
+                column_id
+                model
+                status
+                certificate_of_inspection
+          }
+        }
+      }
+    `, {id: columnID}).then(data => {
+      return data.data.column.elevator
+    })
+}
+//                 ----END ELEVATOR TABLE----
+function queryFetch(query, variables) {
+    return fetch('https://apple-crisp-52216.herokuapp.com/graphql', {
+        method: 'POST',
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+        query: query,
+        variables: variables
+        })
+    }).then(res => res.json())
+}
+</script>
